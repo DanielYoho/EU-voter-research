@@ -1,0 +1,523 @@
+```{r}
+library(ggplot2)
+library(socviz)
+library(dplyr)
+
+df <- read.csv("ZA8868_clean.csv")
+```
+```{r}
+vote_by_eu_opinion <- df %>%
+  filter(!is.na(satisfaction_democracy_eu)) %>%
+  group_by(satisfaction_democracy_eu) %>%
+  summarise(mean_voted = mean(voted_ep == 1, na.rm = TRUE)) %>%
+  mutate(satisfaction_label = factor(
+    satisfaction_democracy_eu,
+    levels = c(4, 3, 2, 1),
+    labels = c("Very Satisfied", "Fairly Satisfied", "Not Very Satisfied", "Not At All Satisfied")
+  ))
+
+ggplot(vote_by_eu_opinion, aes(x = satisfaction_label, y = mean_voted)) + geom_point() +
+  ylim(0,1)
+```
+
+
+
+
+```{r}
+m1 <- lm(voted_ep ~ satisfaction_democracy_eu + residence +
+          social_class + unemployed + living_standard + age, data = df)
+
+summary(m1)
+```
+
+```{r}
+library(broom)
+m1_tidy <- tidy(m1, conf.int = TRUE) 
+m1_tidy
+```
+
+
+```{r}
+m1_tidy <- m1_tidy %>%
+  filter(term != "(Intercept)") %>%
+  mutate(sig_col = case_when(
+    p.value < 0.05 & estimate > 0 ~ "Pos. Sig.",
+      p.value < 0.05 & estimate < 0 ~ "Neg. Sig.",
+      TRUE                           ~ "Not Sig."
+  ))
+
+m1_sig <- m1_tidy %>%
+  filter(p.value < 0.05) %>%
+  mutate(label = sprintf("%.2f", estimate))
+```
+
+```{r}
+m1_tidy <- m1_tidy %>%
+  mutate(term = recode(term,
+                       "social_class" =  "Social Class",
+                       "living_standard" = "Living Standard",
+                       "residencetown" = "Town Resident vs. City Resident",
+                       "satisfaction_democracy_eu" = "Satisfaction with EU Democracy",
+                       "residencerural" = "Rural Resident vs. City Resident",
+                       "unemployed" = "Unemployed",
+                       "age" = "Age"))
+
+p1 <- ggplot(m1_tidy, aes(x = reorder(term, estimate), y = estimate, color = sig_col)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high), size = 0.5)  +
+  scale_color_manual(
+    values = c("Pos. Sig." = "#2E8B57",  # green
+               "Neg. Sig." = "#B22222",  # red
+               "Not Sig." = "grey60")) + coord_flip() +
+  labs(title = "Predictors of EP Election Turnout", 
+       subtitle = "Turnout Estimates with 95% CIs",
+       x = NULL,
+       y = "Coefficient Estimate",
+       color = "Effect Direction") +
+  theme_bw() +
+  theme(
+    legend.position = "top",
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 10)
+  )
+
+p1
+
+
+
+```
+
+```{r}
+voted_by_residence <- df %>%
+  group_by(residence) %>%
+  summarize(turnout = mean(voted_ep == 1, na.rm = TRUE)) 
+
+p2<-  ggplot(voted_by_residence, aes(x=residence, y=turnout)) +
+  geom_col() +
+  labs(title="Turnout by Residence Type") 
+p2
+```
+
+
+```{r}
+satVoting_by_female <- df %>%
+  group_by(female, satisfaction_democracy_eu) %>%
+  summarize(turnout = mean(voted_ep==1, na.rm=TRUE)) %>%
+  filter(!is.na(satisfaction_democracy_eu)) %>%
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"
+      )
+    )
+  ) %>%
+  mutate(
+    gender_label = factor(
+      female,
+      levels = c(1, 0),
+      labels = c("Female", "Not Female")
+    )
+  )
+
+p3 <-  ggplot(satVoting_by_female, aes(x=factor(satisfaction_label), y=turnout, color=factor(gender_label))) +
+  geom_line(aes(group=female)) +
+  geom_point() +
+  labs(
+       title="Turnout vs EU Satisfaction by Gender",
+       y = "Turnout(%)",
+       x = "",
+       subtitle = "EP Election 2024",
+       color = "Gender") +
+  theme_bw() + scale_y_continuous(labels = scales::percent)
+
+p3
+
+
+
+```
+
+```{r}
+satVoting_by_standard <- df %>%
+  # keep only living standards 1 and 7
+  filter(living_standard %in% c(1, 7)) %>% 
+  
+  group_by(living_standard, satisfaction_democracy_eu) %>%
+  summarize(turnout = mean(voted_ep == 1, na.rm = TRUE)) %>%
+  ungroup() %>%
+  
+  # drop NA satisfaction values
+  filter(!is.na(satisfaction_democracy_eu)) %>%
+  
+  # label satisfaction levels
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"
+      )
+    )
+  ) %>%
+  
+  # recode living standard 1 and 7
+  mutate(
+    living_standard = factor(
+      living_standard,
+      levels = c(1, 7),
+      labels = c("Poor Family", "Rich Family")
+    )
+  ) 
+  
+p4 <-  ggplot(satVoting_by_standard, aes(
+    x = satisfaction_label,
+    y = turnout,
+    color = living_standard
+  )) +
+  geom_line(aes(group = living_standard)) +
+  geom_point() +
+  labs(
+    title = "Turnout vs EU Satisfaction by Living Standard",
+    y = "Turnout (%)",
+    x = "",
+    subtitle = "EP Election 2024",
+    color = "Living Standard"
+  ) +
+  theme_bw() + scale_y_continuous(labels = scales::percent)
+
+p4
+
+
+
+```
+
+```{r}
+satVoting_by_unemployed <- df %>%
+
+  group_by(unemployed, satisfaction_democracy_eu) %>%
+  summarize(turnout = mean(voted_ep == 1, na.rm = TRUE)) %>%
+  ungroup() %>%
+  
+  # drop NA satisfaction values
+  filter(!is.na(satisfaction_democracy_eu)) %>%
+  
+  # label satisfaction levels
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"
+      )
+    )
+  ) %>%
+  
+  # recode living standard 1 and 7
+  mutate(
+    unemployed = factor(
+      unemployed,
+      levels = c(0, 1),
+      labels = c("Employed", "Unemployed")
+    )
+  ) 
+  
+p5 <-  ggplot(satVoting_by_unemployed, aes(
+    x = satisfaction_label,
+    y = turnout,
+    color = unemployed
+  )) +
+  geom_line(aes(group = unemployed)) +
+  geom_point() +
+  labs(
+    title = "Turnout vs EU Satisfaction by Employment",
+    y = "Turnout (%)",
+    x = "",
+    subtitle = "EP Election 2024",
+    color = "Employment"
+  ) +
+  theme_bw() + scale_y_continuous(labels = scales::percent)
+
+p5
+
+
+```
+
+
+```{r}
+satVoting_by_euopinion <- df %>%
+  group_by(eu_membership_opinion, satisfaction_democracy_eu) %>%
+  summarize(turnout = mean(voted_ep==1, na.rm=TRUE)) %>%
+  filter(!is.na(satisfaction_democracy_eu)) %>%
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"
+      )
+    )
+  ) %>%
+  
+  filter(!is.na(eu_membership_opinion)) %>%
+  
+  mutate(
+    opinion_label = factor(
+      eu_membership_opinion,
+      levels = c(1, 2, 3),
+      labels = c("Good Thing", "Bad Thing", "Neither")
+    )
+  )
+
+p6 <-  ggplot(satVoting_by_euopinion, aes(x=factor(satisfaction_label), y=turnout, color=factor(opinion_label))) +
+  geom_line(aes(group=eu_membership_opinion)) +
+  geom_point() +
+  labs(
+       title="Turnout vs EU Satisfaction by Opinion on EU Membership",
+       y = "Turnout(%)",
+       x = "",
+       subtitle = "EP Election 2024",
+       color = "Opinion") +
+  theme_bw() + scale_y_continuous(labels = scales::percent)
+
+p6
+
+```
+
+```{r}
+votebysatisfaction2 <- df %>%
+  
+  group_by(satisfaction_democracy_eu) %>%
+  summarise(mean_voted = mean(voted_ep == 1, na.rm = TRUE)) %>%
+  filter(!is.na(satisfaction_democracy_eu)) %>%
+   mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"))) 
+
+initialPlot <- ggplot(votebysatisfaction2, aes(x = satisfaction_label, y = mean_voted)) + 
+  geom_line(aes(group = 1)) +
+  geom_point() +
+  labs(title = "Turnout vs EU Satisfaction",
+       x = "",
+       y = "Turnout(%)",
+       subtitle = "EP Election 2024") +
+  theme_bw() + scale_y_continuous(labels = scales::percent)
+
+initialPlot
+
+  
+```
+```{r}
+eusatisfaction_by_country <- df %>%
+  filter(!is.na(satisfaction_democracy_eu),
+         !is.na(country_code_alpha2)) %>%
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"))) %>%
+  group_by(country_code_alpha2, satisfaction_label) %>%
+    summarise(n = n(),
+              .groups = "drop_last") %>%
+  mutate(percent = (n / sum(n)) *100) %>%
+  mutate(percent = round(percent,2))
+  
+
+country_order <- df %>%
+  filter(!is.na(satisfaction_democracy_eu),
+         !is.na(country_code_alpha2)) %>%
+  group_by(country_code_alpha2) %>%
+  summarise(mean_sat = mean(satisfaction_democracy_eu == 3 | satisfaction_democracy_eu == 4, na.rm = TRUE)) %>%
+  arrange(mean_sat)
+
+eusatisfaction_by_country2 <- eusatisfaction_by_country %>%
+  left_join(country_order, by = "country_code_alpha2") %>%
+  mutate(country_code_alpha2 = factor(country_code_alpha2, 
+                                      levels = country_order$country_code_alpha2))
+
+turnout_by_country <- df %>%
+  filter(!is.na(country_code_alpha2),
+         !is.na(voted_ep)) %>%
+  group_by(country_code_alpha2) %>%
+  summarise(mean_voted = mean(voted_ep == 1))
+
+bar1 <- ggplot() +
+  geom_bar(data = eusatisfaction_by_country2, 
+           mapping = aes(x = country_code_alpha2, y = percent, fill = satisfaction_label),
+           stat = "identity", position = "fill") +
+  theme_minimal() + scale_y_continuous(labels = scales::percent) +
+  labs(title = "Levels of Satisfaction with Democracy in the EU by Country",
+       x = "",
+       y = "",
+       fill = "Levels of Satisfaction",
+       subtitle = "Overlaid with voter turnout by country",
+       caption = "Dashed horizontal line represents 50% satisfaction.") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+geom_hline(yintercept = .5, linetype = "dashed", color = "red") +
+  scale_fill_brewer(palette = "PRGn")
+
+bar1
+
+```
+
+
+```{r}
+satVoting_by_country <- df %>%
+  group_by(country_code_alpha2, satisfaction_democracy_eu) %>%
+  summarize(turnout = mean(voted_ep==1, na.rm=TRUE)) %>%
+  filter(!is.na(satisfaction_democracy_eu)) %>%
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"
+      )
+    )
+  ) %>%
+  
+  filter(!is.na(country_code_alpha2))
+
+turnout_plot_country <-  ggplot(satVoting_by_country,
+       aes(x = satisfaction_label, y = country_code_alpha2, fill = turnout)) +
+  geom_tile() +
+  scale_fill_viridis_c(labels = scales::percent, option = "plasma") +
+  labs(
+    title = "Turnout vs. EU Satisfaction by Country",
+    x = "",
+    y = "",
+    fill = "Turnout"
+  ) +
+  theme_bw()
+
+turnout_plot_country
+
+
+```
+
+
+
+```{r}
+age_means <- df %>%
+  
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"
+      )
+    )
+  )%>%
+  group_by(satisfaction_label) %>%
+  filter(!is.na(satisfaction_democracy_eu),
+         !is.na(age)) %>%
+  summarise(mean_age = mean(age))
+
+density1 <- df %>%
+  filter(!is.na(satisfaction_democracy_eu))  %>%
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"
+      )
+    )
+  ) %>%
+ggplot(df, mapping = aes(x = age, color = satisfaction_label)) + geom_density(size = 1) + 
+  geom_vline(data = age_means,
+             mapping = aes(xintercept = mean_age, color = satisfaction_label),
+             linetype = "dashed",
+             linewidth = 0.8) +
+  theme_bw() + labs(
+    title = "Distribution of Age by Level of Satisfaction with EU Democracy",
+    x = "Age",
+    y = "Density",
+    color = "Satisfaction Level",
+    caption = "Dashed vertical lines represent group-specific mean values."
+  )
+
+density1
+
+``` 
+
+```{r}
+density2 <- df %>%
+  filter(!is.na(age)) %>%
+  ggplot(mapping = aes(x = age)) + geom_density(size = 1) +
+  geom_vline(mapping = aes(xintercept = mean(age)),
+             linewidth = 0.8,
+             linetype = "dashed",
+             color = "red") +
+  labs(
+    title = "Age Distribution",
+    x = "Age",
+    y = "Density",
+    caption = "Dashed vertical line represents age mean value."
+  ) + theme_bw()
+
+density2
+
+ggsave("agedensity.png", density2, width = 5, height = 4)
+```
+
+```{r}
+satHist <- df %>%
+  filter(!is.na(satisfaction_democracy_eu))  %>%
+  mutate(
+    satisfaction_label = factor(
+      satisfaction_democracy_eu,
+      levels = c(1, 2, 3, 4),
+      labels = c(
+        "Not At All Satisfied",
+        "Not Very Satisfied",
+        "Fairly Satisfied",
+        "Very Satisfied"
+      )
+    )
+  ) %>%
+ggplot(mapping = aes(x = satisfaction_label)) +
+  geom_histogram(stat = "count", fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Satisfaction with EU Democracy",
+       x = "Satisfaction Level", y = "Count") +
+  theme_bw()
+
+satHist
+
+ggsave("satHist.png", satHist, width = 7, height = 5)
+```
++
