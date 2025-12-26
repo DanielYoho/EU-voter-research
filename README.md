@@ -7,7 +7,7 @@ Among my analysis methods, I selected control variables and created a multivaria
 
 ## Methods
 
-Data sourced from Eurobarometer 2024 survey **FIND SPECIFIC SURVEY**
+Data sourced from Eurobarometer 2024 survey "Trust in National and International Institutions" (https://www.gesis.org/en/eurobarometer-data-service/overview/eb-trends-trend-files/list-of-trends/trust-in-institutions?utm_source=chatgpt.com)
 
 Cleaned and visualized using R Markdown with ggplot2, dplyr, and broom packages
 
@@ -39,10 +39,27 @@ Overall, findings show a strong correlational trend between satisfaciton and tur
 
 R, R Markdown
 
-broom, ggplot2, dplyr
+broom, ggplot2, dplyr, socviz
 
 Eurobarometer data (2024)
 
 ## Reproducibility
 
+To reproduce this analysis, open `visualizationCode.Rmd` in RStudio and ensure the following packages are installed:
+`broom`, `ggplot2`, `dplyr`, and `socviz`.
 
+Data sources can be accessed through ZA8868_v1-0-0.csv and ZA8868_clean.csv via the main branch
+
+## Sample Plot from Research
+
+Below is a sample plot from my research
+
+![Coefficient Predictors of Change in EU Parliamentary Election Turnout Using 95% Confidence Intervals](https://github.com/DanielYoho/EU-voter-research/blob/35bbdde11a86378e9a569c9e77ccf4c35401efaa/turnoutPredictors.png)
+
+![View the full PDF report here](https://github.com/DanielYoho/EU-voter-research/blob/35bbdde11a86378e9a569c9e77ccf4c35401efaa/Final%20Report.pdf)
+
+## My Information
+
+**Author:** Daniel Yoho 
+**Affiliation:** Computational Social Science Student, University of Pittsburgh  
+**Date:** December 2025
