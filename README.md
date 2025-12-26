@@ -7,7 +7,7 @@ Among my analysis methods, I selected control variables and created a multivaria
 
 ## Methods
 
-Data sourced from Eurobarometer 2024 survey "Trust in National and International Institutions" (https://www.gesis.org/en/eurobarometer-data-service/overview/eb-trends-trend-files/list-of-trends/trust-in-institutions?utm_source=chatgpt.com)
+Data sourced from Eurobarometer 2024 survey "Trust in National and International Institutions" (https://www.gesis.org/en/eurobarometer-data-service/overview/eb-trends-trend-files/list-of-trends/trust-in-institutions.com)
 
 Cleaned and visualized using R Markdown with ggplot2, dplyr, and broom packages
 
