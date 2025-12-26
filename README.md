@@ -7,7 +7,7 @@ Among my analysis methods, I selected control variables and created a multivaria
 
 ## Methods
 
-Data sourced from Eurobarometer 2024 survey "Trust in National and International Institutions" (https://www.gesis.org/en/eurobarometer-data-service/overview/eb-trends-trend-files/list-of-trends/trust-in-institutions.com)
+Data sourced from Eurobarometer 2024 survey "Trust in National and International Institutions" (https://www.gesis.org/en/eurobarometer-data-service/overview/eb-trends-trend-files/list-of-trends/trust-in-institutions)
 
 Cleaned and visualized using R Markdown with ggplot2, dplyr, and broom packages
 
@@ -52,7 +52,8 @@ Data sources can be accessed through ZA8868_v1-0-0.csv and ZA8868_clean.csv via 
 
 ## Sample Plot from Research
 
-Below is a sample plot from my research
+Below is a sample plot from my research:
+
 
 ![Coefficient Predictors of Change in EU Parliamentary Election Turnout Using 95% Confidence Intervals](https://github.com/DanielYoho/EU-voter-research/blob/35bbdde11a86378e9a569c9e77ccf4c35401efaa/turnoutPredictors.png)
 
