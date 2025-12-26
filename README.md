@@ -62,5 +62,7 @@ Below is a sample plot from my research:
 ## My Information
 
 **Author:** Daniel Yoho 
+
 **Affiliation:** Computational Social Science Student, University of Pittsburgh  
+
 **Date:** December 2025
